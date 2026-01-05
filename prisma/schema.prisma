@@ -6,10 +6,149 @@
 
 generator client {
   provider = "prisma-client-js"
-  output   = "../src/generated/prisma"
 }
 
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
+}
+
+// NextAuth.js User model
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String?   @unique
+  emailVerified DateTime?
+  image         String?
+  password      String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  accounts         Account[]
+  sessions         Session[]
+  preferences      UserPreferences?
+  followedProfiles TwitterProfileFollow[]
+}
+
+// NextAuth.js Account model (for OAuth providers)
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+// NextAuth.js Session model
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+// NextAuth.js Verification Token model
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+// Twitter profiles that users can follow
+model TwitterProfile {
+  id           String                 @id @default(cuid())
+  handle       String                 @unique
+  displayName  String
+  profileImage String?
+  bio          String?                @db.Text
+  verified     Boolean                @default(false)
+  createdAt    DateTime               @default(now())
+  updatedAt    DateTime               @updatedAt
+
+  followers TwitterProfileFollow[]
+  tweets    Tweet[]
+}
+
+// Join table for users following Twitter profiles
+model TwitterProfileFollow {
+  id               String   @id @default(cuid())
+  userId           String
+  twitterProfileId String
+  followedAt       DateTime @default(now())
+
+  user           User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  twitterProfile TwitterProfile @relation(fields: [twitterProfileId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, twitterProfileId])
+  @@index([userId])
+  @@index([twitterProfileId])
+}
+
+// User preferences - cached settings
+model UserPreferences {
+  id                   String   @id @default(cuid())
+  userId               String   @unique
+  theme                String   @default("dark")
+  defaultView          String   @default("all")
+  notificationsEnabled Boolean  @default(true)
+  emailNotifications   Boolean  @default(false)
+  favoriteTeamId       Int?
+  tweetRefreshInterval Int      @default(300000)
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  user         User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  favoriteTeam Team? @relation(fields: [favoriteTeamId], references: [id])
+}
+
+// Team model with logo support
+model Team {
+  id            Int      @id @default(autoincrement())
+  name          String   @unique
+  logoUrl       String?
+  league        String?
+  country       String?
+  externalApiId String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  tweets          Tweet[]
+  userPreferences UserPreferences[]
+}
+
+// Tweet model with enhanced fields
+model Tweet {
+  id               Int       @id @default(autoincrement())
+  content          String    @db.Text
+  author           String
+  twitterProfileId String?
+  sentiment        String
+  tweetUrl         String?
+  externalId       String?   @unique
+  likes            Int       @default(0)
+  retweets         Int       @default(0)
+  createdAt        DateTime  @default(now())
+  fetchedAt        DateTime  @default(now())
+  teamId           Int?
+
+  team           Team?           @relation(fields: [teamId], references: [id])
+  twitterProfile TwitterProfile? @relation(fields: [twitterProfileId], references: [id])
+
+  @@index([teamId])
+  @@index([twitterProfileId])
+  @@index([createdAt])
 }

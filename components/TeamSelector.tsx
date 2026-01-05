@@ -9,7 +9,7 @@ const teams = [
     'Arsenal',
     'AS Monaco',
     'Aston Villa',
-    'Athletico Madrid',
+    'Atletico Madrid',
     'Barcelona',
     'Bayern Munich',
     'Besiktas',
@@ -33,11 +33,11 @@ const teams = [
 
 ];
 
-export default function TeamSelector(){
-    const[selectedTeam, setSelectedTeam]= useState('');
-    
-    return(
-        <div className="flex flex-col items-start gap-4 p-4">
+export default function TeamSelector() {
+  const [selectedTeam, setSelectedTeam] = useState('');
+
+  return (
+    <div className="flex flex-col items-start gap-4 p-4">
       <label htmlFor="team" className="text-lg font-medium">
         Select your team:
       </label>
